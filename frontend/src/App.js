@@ -11,6 +11,7 @@ import RoleBasedRoute from './components/Shared/RoleBasedRoute';
 import NormalUserDashboard from './components/Dashboard/NormalUserDashboard';
 import ManagementUserDashboard from './components/Dashboard/ManagementUserDashboard';
 import AdminDashboard from './components/Dashboard/AdminDashboard';
+import CredentialList from './components/Credentials/CredentialList'; // Added for credentials
 import AddCredential from './components/Credentials/AddCredential';
 import UpdateCredential from './components/Credentials/UpdateCredential';
 import UserList from './components/Users/UserList';
@@ -43,6 +44,7 @@ function App() {
           path="/update-credential/:id"
           component={UpdateCredential}
         />
+        <PrivateRoute path="/credentials" component={CredentialList} />
         <RoleBasedRoute
           path="/manage-users"
           roles={['admin']}

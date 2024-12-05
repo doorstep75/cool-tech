@@ -102,8 +102,9 @@ router.post(
 
     try {
       console.log(`Adding credential with division: ${division}`);
-      // Check if the division is among the user's allowed divisions
-      if (!req.user.divisions.includes(division)) {
+
+      // Allow admins to add credentials to any division
+      if (req.user.role !== 'admin' && !req.user.divisions.includes(division)) {
         return res.status(403).json({
           message: 'You do not have permission to add credentials to this division.',
         });

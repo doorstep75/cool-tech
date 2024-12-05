@@ -2,6 +2,7 @@
 import React from 'react';
 import { Container, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import CredentialList from '../Credentials/CredentialList';
 
 const AdminDashboard = () => {
   return (

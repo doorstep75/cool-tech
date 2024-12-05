@@ -1,6 +1,5 @@
-// src/components/Users/ManageUser.js
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Container, Alert, ListGroup } from 'react-bootstrap';
+import { Form, Button, Container, Alert, ListGroup, Toast } from 'react-bootstrap';
 import axios from '../../services/api';
 
 const ManageUser = ({ match, history }) => {
@@ -9,6 +8,8 @@ const ManageUser = ({ match, history }) => {
   const [availableDivisions, setAvailableDivisions] = useState([]);
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     const fetchUserAndDivisions = async () => {
@@ -18,16 +19,16 @@ const ManageUser = ({ match, history }) => {
           axios.get(`/admin/users/${match.params.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get('/divisions', {
+          axios.get('/admin/divisions', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-        setUser(userRes.data);
-        setRole(userRes.data.role);
-        setDivisions(userRes.data.divisions);
-        setAvailableDivisions(divisionsRes.data);
+        setUser(userRes.data.user);
+        setRole(userRes.data.user.role);
+        setDivisions(userRes.data.user.divisions); // Store full division objects
+        setAvailableDivisions(divisionsRes.data.divisions);
       } catch (err) {
-        setError(err.response.data.message || 'Error fetching data');
+        setError(err.response?.data?.message || 'Error fetching data');
       }
     };
     fetchUserAndDivisions();
@@ -40,10 +41,12 @@ const ManageUser = ({ match, history }) => {
         '/admin/change-role',
         { userId: user._id, role },
         { headers: { Authorization: `Bearer ${token}` } }
-      );
-      history.push('/manage-users');
+      );      
+      // Show success toast for role change
+      setToastMessage('User role updated successfully');
+      setShowToast(true);
     } catch (err) {
-      setError(err.response.data.message || 'Failed to change role');
+      setError(err.response?.data?.message || 'Failed to change role');
     }
   };
 
@@ -55,9 +58,13 @@ const ManageUser = ({ match, history }) => {
         { userId: user._id, divisionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setDivisions([...divisions, divisionId]);
+      const assignedDivision = availableDivisions.find((div) => div._id === divisionId);
+      setDivisions([...divisions, assignedDivision]);
+      // Show success toast for division assignment
+      setToastMessage('Division assigned successfully');
+      setShowToast(true);
     } catch (err) {
-      setError(err.response.data.message || 'Failed to assign division');
+      setError(err.response?.data?.message || 'Failed to assign division');
     }
   };
 
@@ -69,9 +76,12 @@ const ManageUser = ({ match, history }) => {
         { userId: user._id, divisionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setDivisions(divisions.filter((id) => id !== divisionId));
+      setDivisions(divisions.filter((div) => div._id !== divisionId));
+      // Step 5: Show success toast for division unassignment
+      setToastMessage('Division unassigned successfully');
+      setShowToast(true);  
     } catch (err) {
-      setError(err.response.data.message || 'Failed to unassign division');
+      setError(err.response?.data?.message || 'Failed to unassign division');
     }
   };
 
@@ -104,28 +114,25 @@ const ManageUser = ({ match, history }) => {
 
       <h3 className="mt-5">Assigned Divisions</h3>
       <ListGroup>
-        {divisions.map((divId) => {
-          const division = availableDivisions.find((d) => d._id === divId);
-          return (
-            <ListGroup.Item key={divId}>
-              {division ? division.name : divId}
-              <Button
-                variant="danger"
-                size="sm"
-                className="float-end"
-                onClick={() => handleUnassignDivision(divId)}
-              >
-                Unassign
-              </Button>
-            </ListGroup.Item>
-          );
-        })}
+        {divisions.map((div) => (
+          <ListGroup.Item key={div._id}>
+            {div.name}
+            <Button
+              variant="danger"
+              size="sm"
+              className="float-end"
+              onClick={() => handleUnassignDivision(div._id)}
+            >
+              Unassign
+            </Button>
+          </ListGroup.Item>
+        ))}
       </ListGroup>
 
       <h3 className="mt-5">Assign New Division</h3>
       <ListGroup>
         {availableDivisions
-          .filter((div) => !divisions.includes(div._id))
+          .filter((div) => !divisions.some((assigned) => assigned._id === div._id))
           .map((div) => (
             <ListGroup.Item key={div._id}>
               {div.name}
@@ -140,6 +147,17 @@ const ManageUser = ({ match, history }) => {
             </ListGroup.Item>
           ))}
       </ListGroup>
+
+      {/* Toast component */}
+      <Toast
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        delay={3000}
+        autohide
+        className="position-fixed top-0 end-0 m-3"
+      >
+        <Toast.Body>{toastMessage}</Toast.Body>
+      </Toast>      
     </Container>
   );
 };

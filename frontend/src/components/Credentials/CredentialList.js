@@ -1,3 +1,4 @@
+// src/components/Credentials/CredentialList.js
 import React, { useState, useEffect, useContext } from 'react';
 import { Table, Button, Container, Alert } from 'react-bootstrap';
 import axios from '../../services/api';
@@ -11,16 +12,22 @@ const CredentialList = () => {
   const [credentials, setCredentials] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  console.log('CredentialList Component Rendered'); // console log
 
   useEffect(() => {
     const fetchCredentials = async () => {
       try {
-        const token = localStorage.getItem('token');
-        console.log('Token:', token); // Debug token
-
-        const res = await axios.get('/credentials/user');
+        let res;
+        if (user.role === 'admin') {
+          console.log('Admin fetching all credentials...'); // console log
+          // Admin users fetch all credentials
+          res = await axios.get('/credentials');
+        } else {
+          console.log('Non-admin fetching user credentials...'); // console log
+          // Normal and management users fetch their accessible credentials
+          res = await axios.get('/credentials/user');
+        }
         console.log('Fetched Credentials Response:', res.data.result); // Debug response
-
         setCredentials(res.data.result);
       } catch (err) {
         console.error('Error fetching credentials:', err);
@@ -30,7 +37,10 @@ const CredentialList = () => {
       }
     };
     fetchCredentials();
-  }, []);
+  }, [user.role]);
+
+
+  console.log('Credentials State:', credentials); // Debug current credentials state
 
   if (loading) {
     return (
@@ -65,7 +75,7 @@ const CredentialList = () => {
               <tr key={cred._id}>
                 <td>{cred.username}</td>
                 <td>{cred.description}</td>
-                <td>{cred.division?.name || cred.division}</td> {/* Optional chaining */}
+                <td>{cred.division?.name || cred.division}</td>
                 {user.role !== ROLE_NORMAL && (
                   <td>
                     <Button

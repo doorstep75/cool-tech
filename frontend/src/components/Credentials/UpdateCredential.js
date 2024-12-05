@@ -1,51 +1,54 @@
 // src/components/Credentials/UpdateCredential.js
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
+import { useParams, useHistory } from 'react-router-dom';
 import axios from '../../services/api';
-import { AuthContext } from '../../contexts/AuthContext';
 
-const UpdateCredential = ({ match, history }) => {
-  const { user } = useContext(AuthContext);
+const UpdateCredential = () => {
+  const { id } = useParams();
+  const history = useHistory();
   const [credential, setCredential] = useState(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
+  // Fetch the credential details on load
   useEffect(() => {
     const fetchCredential = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(`/credentials/${match.params.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCredential(res.data);
-        setUsername(res.data.username);
-        setPassword(res.data.password);
-        setDescription(res.data.description);
+        const res = await axios.get(`/credentials/${id}`);
+        const { username, description } = res.data.result;
+        setCredential(res.data.result);
+        setUsername(username);
+        setDescription(description);
       } catch (err) {
-        setError(err.response.data.message || 'Error fetching credential');
+        console.error('Error fetching credential:', err);
+        setError(err.response?.data?.message || 'Failed to fetch credential.');
+      } finally {
+        setLoading(false);
       }
     };
     fetchCredential();
-  }, [match.params.id]);
+  }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `/credentials/${match.params.id}`,
-        { username, password, description },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      history.push('/dashboard');
+      // Update the credential
+      const payload = { username, description };
+      if (password) payload.password = password; // Include password only if updated
+
+      await axios.put(`/credentials/${id}`, payload);
+      history.goBack(); // Redirect to the previous page
     } catch (err) {
-      setError(err.response.data.message || 'Failed to update credential');
+      console.error('Error updating credential:', err);
+      setError(err.response?.data?.message || 'Failed to update credential.');
     }
   };
 
-  if (!credential) {
+  if (loading) {
     return <Container className="mt-5">Loading...</Container>;
   }
 
@@ -68,12 +71,14 @@ const UpdateCredential = ({ match, history }) => {
         <Form.Group controlId="password" className="mt-3">
           <Form.Label>Password</Form.Label>
           <Form.Control
-            type="text"
-            required
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
+            placeholder="Enter new password (leave blank to retain current password)"
           />
+          <Form.Text className="text-muted">
+            Leave the password blank if you don't want to change it.
+          </Form.Text>
         </Form.Group>
 
         <Form.Group controlId="description" className="mt-3">
