@@ -60,7 +60,7 @@ Ensure you have the following installed:
   ```
   
 # Backend (from the /backend directory)
-npm start
+node server.js
 
 # Frontend (from the /frontend directory)
 npm start
