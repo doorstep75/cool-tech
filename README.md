@@ -49,9 +49,15 @@ Ensure you have the following installed:
    ```
 2.	Install dependencies for both frontend and backend:
   ```bash
+  cd backend
+  npm install
+  ```
 3. 	Set up the environment variables (see Environment Variables).
+  
 4.  Start the development servers:
   ```bash
+  npm start
+  ```
   
 # Backend (from the /backend directory)
 npm start
@@ -79,8 +85,8 @@ JWT_SECRET=<your_jwt_secret>
 
 
   ```env
+  REACT_APP_API_URL=http://localhost:3000/api
   REACT_APP_API_URL=http://localhost:5000/api
-  REACT_APP_API_URL: The base URL for your backend API.
   ```
 
 ## Running the Application
