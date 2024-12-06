@@ -1,7 +1,7 @@
 // src/components/Credentials/AddCredential.js
 
 import React, { useState, useContext, useEffect } from 'react';
-import { Form, Button, Container, Alert } from 'react-bootstrap';
+import { Form, Button, Container, Alert, Spinner } from 'react-bootstrap';
 import axios from '../../services/api';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useHistory } from 'react-router-dom';
@@ -19,17 +19,19 @@ const AddCredential = () => {
   // Divisions and errors
   const [divisions, setDivisions] = useState([]); // Divisions list
   const [error, setError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(true); // To show loading state for divisions
+  const [submitLoading, setSubmitLoading] = useState(false); // To show loading state on form submission
 
   useEffect(() => {
     const fetchDivisions = async () => {
       try {
         const endpoint =
           user.role === 'admin' ? '/admin/divisions' : '/user/divisions';
-  
+
         const res = await axios.get(endpoint);
         console.log('Fetched Divisions Response:', res.data); // Log the entire response
-  
+
         // Handle different response structures
         let divisionsData;
         if (Array.isArray(res.data)) {
@@ -39,7 +41,7 @@ const AddCredential = () => {
         } else {
           divisionsData = [];
         }
-  
+
         setDivisions(divisionsData);
         console.log('Divisions Data Set:', divisionsData);
         setLoading(false);
@@ -52,15 +54,47 @@ const AddCredential = () => {
     fetchDivisions();
   }, [user.role]);
 
+  const handlePasswordChange = (e) => {
+    const pwd = e.target.value;
+    setPassword(pwd);
+    if (pwd.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.');
+    } else {
+      setPasswordError('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Reset errors
+    setError('');
+    setPasswordError('');
+  
+    // Frontend validation
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.');
+      return;
+    }
+  
+    if (!divisionId) {
+      setError('Please select a division.');
+      return;
+    }
+  
     try {
-      await axios.post('/credentials', {
-        username,
-        password,
-        description,
-        division: divisionId,
-      });
+      setSubmitLoading(true); // Start loading
+      await axios.post(
+        '/credentials', // Correct endpoint
+        {
+          username,
+          password,
+          description,
+          division: divisionId, // Pass divisionId in the request body
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        }
+      );
       // Reset form fields
       setUsername('');
       setPassword('');
@@ -69,17 +103,33 @@ const AddCredential = () => {
       // Navigate back to the previous page
       history.go(-1); // Use the browser's history to go back to the last page
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add credential');
+      console.error('Error adding credential:', err);
+  
+      // Safely access error message and prevent runtime errors
+      const errorMessage = err.response?.data?.message || '';
+      if (errorMessage.includes('Password must be at least 6 characters long')) {
+        setPasswordError('Password must be at least 6 characters long.');
+      } else if (errorMessage.includes('Access denied')) {
+        setError('You do not have permission to add credentials to this division.');
+      } else {
+        setError(errorMessage || 'Failed to add credential.');
+      }
+    } finally {
+      setSubmitLoading(false); // End loading
     }
   };
-
+  
   return (
     <Container className="mt-5">
       <h2>Add Credential</h2>
       {error && <Alert variant="danger">{error}</Alert>}
 
       {loading ? ( // Show loading state while divisions are being fetched
-        <p>Loading divisions...</p>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading divisions...</span>
+          </Spinner>
+        </div>
       ) : (
         <Form onSubmit={handleSubmit}>
           <Form.Group controlId="divisionId">
@@ -116,9 +166,14 @@ const AddCredential = () => {
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               placeholder="Enter password"
+              isInvalid={passwordError !== ''}
+              minLength={6}
             />
+            <Form.Control.Feedback type="invalid">
+              {passwordError}
+            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group controlId="description" className="mt-3">
@@ -132,8 +187,21 @@ const AddCredential = () => {
             />
           </Form.Group>
 
-          <Button variant="primary" type="submit" className="mt-4">
-            Add Credential
+          <Button variant="primary" type="submit" className="mt-4" disabled={submitLoading}>
+            {submitLoading ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                />{' '}
+                Adding...
+              </>
+            ) : (
+              'Add Credential'
+            )}
           </Button>
         </Form>
       )}

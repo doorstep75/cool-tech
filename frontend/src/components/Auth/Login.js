@@ -13,10 +13,14 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Sending login request:', { username, password });
       const res = await axios.post('/auth/login', { username, password });
-      login(res.data.result, res.data.token);
+      console.log('Login response:', res.data);
+      login(res.data.result, res.data.token); // Call AuthContext's login function
     } catch (err) {
-      setError(err.response.data.message || 'Login failed');
+      console.error('Login error:', err); // Log the full error
+      console.error('Error details:', err.response); // Log response if it exists
+      setError(err.response?.data?.message || 'Login failed'); // Safely handle missing response
     }
   };
 

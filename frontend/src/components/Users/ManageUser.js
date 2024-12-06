@@ -1,37 +1,80 @@
+// src/components/Users/ManageUser.js
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Container, Alert, ListGroup, Toast } from 'react-bootstrap';
 import axios from '../../services/api';
 
-const ManageUser = ({ match, history }) => {
+const ManageUser = ({ match }) => {
   const [user, setUser] = useState(null);
   const [divisions, setDivisions] = useState([]);
   const [availableDivisions, setAvailableDivisions] = useState([]);
+  const [ous, setOUs] = useState([]);
+  const [availableOUs, setAvailableOUs] = useState([]);
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
-    const fetchUserAndDivisions = async () => {
+    const fetchUserAndAssignments = async () => {
       try {
         const token = localStorage.getItem('token');
-        const [userRes, divisionsRes] = await Promise.all([
+        
+        // Ensure the token exists
+        if (!token) {
+          throw new Error('Authentication token is missing');
+        }
+
+        // Fetch user, divisions, and OUs concurrently
+        const [userRes, divisionsRes, allOUsRes] = await Promise.all([
           axios.get(`/admin/users/${match.params.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get('/admin/divisions', {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          axios.get('/admin/ous', { // Now this returns all OUs as an array
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
-        setUser(userRes.data.user);
-        setRole(userRes.data.user.role);
-        setDivisions(userRes.data.user.divisions); // Store full division objects
-        setAvailableDivisions(divisionsRes.data.divisions);
+
+        // Validate the response structure
+        if (!userRes?.data || !divisionsRes?.data || !allOUsRes?.data) {
+          throw new Error('Unexpected response structure from the server');
+        }
+
+        console.log('Fetched OUs from API:', allOUsRes.data);
+        console.log('User Assigned OUs:', userRes.data.user.ous);
+
+        setUser(userRes.data.user); // Set the user data
+        setRole(userRes.data.user.role); // Set the user role
+
+        // Handle divisions (unchanged)
+        setDivisions(userRes.data.user.divisions || []);
+        setAvailableDivisions(divisionsRes.data.divisions || []);
+
+        // Safely process OUs
+        const fetchedOUs = allOUsRes.data || [];
+        const userAssignedOUIds = (userRes.data.user.ous || []).map((id) => id.toString());
+
+        const userAssignedOUs = fetchedOUs.filter((ou) =>
+          userAssignedOUIds.includes(ou._id.toString())
+        );
+        const unassignedOUs = fetchedOUs.filter((ou) =>
+          !userAssignedOUIds.includes(ou._id.toString())
+        );
+
+        console.log('Assigned OUs:', userAssignedOUs);
+        console.log('Unassigned OUs:', unassignedOUs);
+
+        setOUs(userAssignedOUs);
+        setAvailableOUs(unassignedOUs);
       } catch (err) {
-        setError(err.response?.data?.message || 'Error fetching data');
+        console.error('Error fetching user and assignments:', err);
+        setError(err.message || 'Error fetching data');
       }
     };
-    fetchUserAndDivisions();
+
+    fetchUserAndAssignments();
   }, [match.params.id]);
 
   const handleRoleChange = async () => {
@@ -41,8 +84,7 @@ const ManageUser = ({ match, history }) => {
         '/admin/change-role',
         { userId: user._id, role },
         { headers: { Authorization: `Bearer ${token}` } }
-      );      
-      // Show success toast for role change
+      );
       setToastMessage('User role updated successfully');
       setShowToast(true);
     } catch (err) {
@@ -60,7 +102,6 @@ const ManageUser = ({ match, history }) => {
       );
       const assignedDivision = availableDivisions.find((div) => div._id === divisionId);
       setDivisions([...divisions, assignedDivision]);
-      // Show success toast for division assignment
       setToastMessage('Division assigned successfully');
       setShowToast(true);
     } catch (err) {
@@ -77,11 +118,43 @@ const ManageUser = ({ match, history }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setDivisions(divisions.filter((div) => div._id !== divisionId));
-      // Step 5: Show success toast for division unassignment
       setToastMessage('Division unassigned successfully');
-      setShowToast(true);  
+      setShowToast(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to unassign division');
+    }
+  };
+
+  const handleAssignOU = async (ouId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        '/admin/assign',
+        { userId: user._id, ouId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const assignedOU = availableOUs.find((ou) => ou._id === ouId);
+      setOUs([...ous, assignedOU]);
+      setToastMessage('Organisational Unit assigned successfully');
+      setShowToast(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to assign Organisational Unit');
+    }
+  };
+
+  const handleUnassignOU = async (ouId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        '/admin/unassign',
+        { userId: user._id, ouId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setOUs(ous.filter((ou) => ou._id !== ouId));
+      setToastMessage('Organisational Unit unassigned successfully');
+      setShowToast(true);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to unassign Organisational Unit');
     }
   };
 
@@ -148,7 +221,42 @@ const ManageUser = ({ match, history }) => {
           ))}
       </ListGroup>
 
-      {/* Toast component */}
+      <h3 className="mt-5">Assigned Organisational Units</h3>
+      <ListGroup>
+        {ous.map((ou) => (
+          <ListGroup.Item key={ou._id}>
+            {ou.name}
+            <Button
+              variant="danger"
+              size="sm"
+              className="float-end"
+              onClick={() => handleUnassignOU(ou._id)}
+            >
+              Unassign
+            </Button>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
+
+      <h3 className="mt-5">Assign New Organisational Unit</h3>
+      <ListGroup>
+        {availableOUs
+          .filter((ou) => !ous.some((assigned) => assigned._id === ou._id))
+          .map((ou) => (
+            <ListGroup.Item key={ou._id}>
+              {ou.name}
+              <Button
+                variant="success"
+                size="sm"
+                className="float-end"
+                onClick={() => handleAssignOU(ou._id)}
+              >
+                Assign
+              </Button>
+            </ListGroup.Item>
+          ))}
+      </ListGroup>
+
       <Toast
         show={showToast}
         onClose={() => setShowToast(false)}
@@ -157,7 +265,7 @@ const ManageUser = ({ match, history }) => {
         className="position-fixed top-0 end-0 m-3"
       >
         <Toast.Body>{toastMessage}</Toast.Body>
-      </Toast>      
+      </Toast>
     </Container>
   );
 };

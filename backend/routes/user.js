@@ -1,8 +1,10 @@
+// backend>routes>user.js
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth.js';
 import Credential from '../models/Credential.js';
 import Division from '../models/Division.js';
 import OrganisationalUnit from '../models/OrganisationalUnit.js';
+import User from '../models/User.js';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -46,7 +48,7 @@ router.get('/divisions/:id/credentials', authenticateJWT, async (req, res) => {
 
 // Add Credential to a Division
 router.post('/divisions/:id/credentials', authenticateJWT, async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; // The division ID from the URL
   const { username, password, description } = req.body;
 
   // Validate ObjectId format
@@ -57,10 +59,11 @@ router.post('/divisions/:id/credentials', authenticateJWT, async (req, res) => {
 
   // Validate input fields
   const validationErrors = [
-    username && typeof username !== 'string' && 'Username must be a string',
-    password && typeof password !== 'string' && 'Password must be a string',
+    typeof username !== 'string' && 'Username must be a string',
+    typeof password !== 'string' && 'Password must be a string',
+    password.length < 6 && 'Password must be at least 6 characters long',
     description && typeof description !== 'string' && 'Description must be a string',
-  ].filter((error) => error);
+  ].filter(Boolean);
 
   if (validationErrors.length > 0) {
     return res.status(400).json({ message: validationErrors.join(', ') });
@@ -73,14 +76,16 @@ router.post('/divisions/:id/credentials', authenticateJWT, async (req, res) => {
       return res.status(404).json({ message: 'Division not found' });
     }
 
-    // Check if user has access
+    // Check if the logged-in user has access to this division
     if (!req.user.divisions.includes(id)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const credential = new Credential({ username, password, description });
+    // Create the credential and associate it with the division
+    const credential = new Credential({ username, password, description, division: id });
     await credential.save();
 
+    // Add the credential to the division's repository
     division.credentialRepository.push(credential._id);
     await division.save();
 
@@ -156,19 +161,33 @@ router.get('/divisions', authenticateJWT, async (req, res) => {
   }
 });
 
-// Get organisational units for the logged-in user
 router.get('/ous', authenticateJWT, async (req, res) => {
   try {
-    const user = req.user;
+    // Re-fetch the full user object from the database
+    const fullUser = await User.findById(req.user.id);
+    console.log('Full User:', fullUser); // Log the full user object
+
+    // Fetch OUs directly assigned to the user
+    const directlyAssignedOUs = fullUser.ous && fullUser.ous.length > 0
+      ? await OrganisationalUnit.find({ _id: { $in: fullUser.ous } })
+      : [];
 
     // Fetch divisions assigned to the user
-    const divisions = await Division.find({ _id: { $in: user.divisions } });
+    const divisions = await Division.find({ _id: { $in: fullUser.divisions } });
 
-    // Get unique OUs based on the user's divisions
-    const ouIds = [...new Set(divisions.map((division) => division.ou))];
-    const ous = await OrganisationalUnit.find({ _id: { $in: ouIds } });
+    // Get OUs linked to the user's divisions
+    const ouIdsFromDivisions = [...new Set(divisions.map((division) => division.ou.toString()))];
+    const ousFromDivisions = await OrganisationalUnit.find({ _id: { $in: ouIdsFromDivisions } });
 
-    res.status(200).json(ous);
+    // Merge directly assigned OUs and division-linked OUs
+    const allOUs = [...directlyAssignedOUs, ...ousFromDivisions];
+
+    // Remove duplicates if any (if an OU is both assigned directly and via a division)
+    const uniqueOUs = allOUs.filter((ou, index) => 
+      allOUs.findIndex(o => o._id.toString() === ou._id.toString()) === index
+    );
+
+    res.status(200).json(uniqueOUs);
   } catch (error) {
     console.error('Error fetching organisational units:', error);
     res.status(500).json({ message: 'Something went wrong' });

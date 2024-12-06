@@ -3,7 +3,8 @@
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth.js';
 import User from '../models/User.js';
-import Division from '../models/Division.js'; // Import Division model
+import Division from '../models/Division.js';
+import OrganisationalUnit from '../models/OrganisationalUnit.js'; // Import the OU model
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -37,8 +38,8 @@ router.get('/users', authenticateJWT, isAdmin, async (req, res) => {
 
 /**
  * @route   GET /api/admin/divisions
- * @desc    Fetch all divisions
- * @access  Protected (Admin users only)
+ * @desc    Fetch all divisions (Admin Only)
+ * @access  Protected (Admin users)
  */
 router.get('/divisions', authenticateJWT, isAdmin, async (req, res) => {
   try {
@@ -68,6 +69,22 @@ router.get('/users/:id', authenticateJWT, isAdmin, async (req, res) => {
     res.json({ user });
   } catch (error) {
     console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/**
+ * @route   GET /api/admin/ous
+ * @desc    Fetch all OUs (Admin Only)
+ * @access  Protected (Admin users)
+ */
+router.get('/ous', authenticateJWT, isAdmin, async (req, res) => {
+  try {
+    const ous = await OrganisationalUnit.find();
+    // Return OUs as a plain array so `allOUsRes.data` is an array in the frontend
+    res.json(ous);
+  } catch (error) {
+    console.error('Error fetching OUs:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
