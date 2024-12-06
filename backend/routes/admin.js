@@ -1,5 +1,4 @@
 // backend/routes/admin.js
-
 import express from 'express';
 import { authenticateJWT } from '../middleware/auth.js';
 import User from '../models/User.js';
@@ -25,10 +24,26 @@ const validateObjectId = (id, fieldName) => {
   return null;
 };
 
-// **New Route**: Get All Users (Admin Only)
+/**
+ * @route   GET /api/admin/users
+ * @desc    Fetch all users (Admin Only)
+ * @access  Protected (Admin users)
+ */
 router.get('/users', authenticateJWT, isAdmin, async (req, res) => {
   try {
-    const users = await User.find().populate('divisions', 'name');
+    // Fetch all users with divisions and OUs
+    const users = await User.find()
+      .populate('divisions', 'name')
+      .populate('ous', 'name'); // Include OU names
+
+          // Ensure no duplicate OUs
+    const uniqueUsers = users.map((user) => ({
+      ...user.toObject(),
+      ous: user.ous.filter(
+        (ou, index, self) => self.findIndex((o) => o._id.toString() === ou._id.toString()) === index
+      ),
+    }));
+
     res.json({ result: users });
   } catch (error) {
     console.error('Error fetching users:', error);

@@ -1,28 +1,30 @@
 import mongoose from 'mongoose';
 
+// Define schema for divisions.
 const divisionSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Division name is required'],
-      trim: true, // Removes extra spaces
-      minlength: [3, 'Division name must be at least 3 characters long'],
+      required: [true, 'Division name is required'], // Ensure name is provided.
+      trim: true, // Remove leading/trailing spaces.
+      minlength: [3, 'Division name must be at least 3 characters long'], // Enforce minimum length.
     },
     ou: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'OrganisationalUnit',
-      required: [true, 'Organisational Unit reference is required'],
+      ref: 'OrganisationalUnit', // Reference to Organisational Unit.
+      required: [true, 'Organisational Unit reference is required'], // Ensure OU is linked.
     },
     credentialRepository: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Credential',
+        ref: 'Credential', // Reference to associated credentials.
       },
     ],
   },
   {
-    timestamps: true, // Automatically adds `createdAt` and `updatedAt` fields
+    timestamps: true, // Add `createdAt` and `updatedAt` fields automatically.
   }
 );
 
+// Export the Division model.
 export default mongoose.model('Division', divisionSchema);

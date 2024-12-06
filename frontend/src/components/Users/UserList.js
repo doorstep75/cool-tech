@@ -1,25 +1,25 @@
-// src/components/Users/UserList.js
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Container, Alert } from 'react-bootstrap';
 import axios from '../../services/api';
 import { Link } from 'react-router-dom';
 
 const UserList = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [users, setUsers] = useState([]); // Holds the list of users
+  const [loading, setLoading] = useState(true); // Tracks loading state
+  const [error, setError] = useState(''); // Tracks errors
 
+  // Fetch users on component load
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('/admin/users'); // No need for manual token; interceptor handles it
-        console.log('Fetched Users:', res.data.result); // Debug backend response
-        setUsers(res.data.result || []); // Safeguard against undefined result
+        const res = await axios.get('/admin/users'); // Fetch user data
+        console.log('Fetched Users:', res.data.result); // Log the response
+        setUsers(res.data.result || []); // Update users state
       } catch (err) {
         console.error('Error fetching users:', err);
         setError('Failed to fetch users. Please try again later.');
       } finally {
-        setLoading(false); // Ensure loading state is cleared
+        setLoading(false); // Clear loading state
       }
     };
     fetchUsers();
@@ -44,13 +44,14 @@ const UserList = () => {
             <th>Username</th>
             <th>Role</th>
             <th>Divisions</th>
+            <th>Organisational Units</th> {/* Column for OUs */}
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td colSpan="4" className="text-center">
+              <td colSpan="5" className="text-center">
                 No users found.
               </td>
             </tr>
@@ -61,6 +62,11 @@ const UserList = () => {
                 <td>{user.role}</td>
                 <td>
                   {user.divisions.map((div) => div.name).join(', ') || 'None'}
+                </td>
+                <td>
+                  {user.ous?.length > 0
+                    ? user.ous.map((ou) => ou.name).join(', ') // List OUs
+                    : 'None'}
                 </td>
                 <td>
                   <Button

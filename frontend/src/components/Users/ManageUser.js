@@ -150,7 +150,23 @@ const ManageUser = ({ match }) => {
         { userId: user._id, ouId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setOUs(ous.filter((ou) => ou._id !== ouId));
+  
+      // Find the OU being unassigned
+      const unassignedOU = ous.find((ou) => ou._id === ouId);
+  
+      // Update the state
+      setOUs(ous.filter((ou) => ou._id !== ouId)); // Remove from assigned OUs
+      setAvailableOUs((prevAvailableOUs) => {
+        const updatedAvailableOUs = [...prevAvailableOUs, unassignedOU];
+  
+        // Ensure no duplicates
+        const uniqueAvailableOUs = updatedAvailableOUs.filter(
+          (ou, index, self) => self.findIndex((o) => o._id === ou._id) === index
+        );
+  
+        return uniqueAvailableOUs;
+      });
+  
       setToastMessage('Organisational Unit unassigned successfully');
       setShowToast(true);
     } catch (err) {

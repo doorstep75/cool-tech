@@ -1,20 +1,21 @@
-// backend/server.js
-
+// Import dependencies.
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import helmet from 'helmet'; // Security middleware
-import morgan from 'morgan'; // Logging middleware
+import helmet from 'helmet'; // For security headers.
+import morgan from 'morgan'; // For request logging.
 
+// Import route modules.
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import userRoutes from './routes/user.js';
 import credentialRoutes from './routes/credentials.js';
 
+// Load environment variables.
 dotenv.config();
 
-// Check for missing environment variables before using them
+// Ensure required environment variables are set.
 if (!process.env.MONGODB_URI) {
   console.error('Error: MONGODB_URI not defined in .env file');
   process.exit(1);
@@ -27,25 +28,22 @@ if (!process.env.JWT_SECRET) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(helmet()); // Secure HTTP headers with Helmet
-app.use(cors()); // Enable CORS for cross-origin requests
-app.use(express.json()); // Parse JSON request bodies
-app.use(morgan('dev')); // Log HTTP requests
+// Apply middleware.
+app.use(helmet()); // Secure HTTP headers.
+app.use(cors()); // Enable cross-origin requests.
+app.use(express.json()); // Parse JSON bodies.
+app.use(morgan('dev')); // Log HTTP requests.
 
-// Routes
+// Register routes.
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/user', userRoutes);
 
-// Debug logs to confirm routes registered
-console.log('Auth routes registered at /api/auth');
-console.log('Admin routes registered at /api/admin');
-console.log('Credential routes registered at /api/credentials');
-console.log('User routes registered at /api/user');
+// Debug log for route registration.
+console.log('Routes registered: /api/auth, /api/admin, /api/credentials, /api/user');
 
-// MongoDB Connection
+// Connect to MongoDB.
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
@@ -56,10 +54,10 @@ mongoose
   })
   .catch((error) => {
     console.error('Error connecting to MongoDB:', error.message);
-    process.exit(1); // Exit the process with failure
+    process.exit(1);
   });
 
-// Handle graceful shutdown
+// Graceful shutdown.
 process.on('SIGINT', async () => {
   console.log('Shutting down server...');
   await mongoose.connection.close();
@@ -67,8 +65,8 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Error handling middleware (placed after all routes)
+// Global error handler.
 app.use((err, req, res, next) => {
-  console.error(err.stack); // Log the error for debugging
+  console.error(err.stack); // Log the error.
   res.status(500).json({ message: 'Internal Server Error' });
 });

@@ -1,6 +1,6 @@
-// backend/models/Credential.js
 import mongoose from 'mongoose';
 
+// Schema for storing credentials
 const credentialSchema = new mongoose.Schema(
   {
     username: {
@@ -18,12 +18,12 @@ const credentialSchema = new mongoose.Schema(
     },
     division: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Division',
+      ref: 'Division', // Reference to Division model
       required: [true, 'Division reference is required'],
     },
   },
   {
-    timestamps: true, // Automatically adds `createdAt` and `updatedAt` fields
+    timestamps: true, // Adds `createdAt` and `updatedAt` fields
   }
 );
 

@@ -1,37 +1,59 @@
-// src/components/Auth/Register.js
 import React, { useState } from 'react';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
+import { useHistory } from 'react-router-dom'; // For navigation
 import axios from '../../services/api';
 
-const Register = ({ history }) => {
+const Register = () => {
+  // State for form inputs, success, and error messages
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const history = useHistory(); // Navigation hook
 
+  // Handles form submission for registration
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form behaviour
+    setError(''); // Clear previous errors
+    setSuccess(''); // Clear success messages
+
+    // Validate passwords
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
     try {
-      await axios.post('/auth/register', { username, password });
-      setSuccess('Registration successful! You can now login.');
-      setUsername('');
+      // Send registration request to the backend
+      const response = await axios.post('/auth/register', { username, password });
+      setSuccess('Registration successful! Redirecting to login...');
+      setUsername(''); // Reset form fields
       setPassword('');
       setConfirmPassword('');
+
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        history.push('/'); // Redirect to login
+      }, 2000); // 2 seconds delay
     } catch (err) {
-      setError(err.response.data.message || 'Registration failed');
+      // Handle errors and display appropriate messages
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     }
   };
 
   return (
     <Container className="mt-5">
       <h2>Register</h2>
+      {/* Display error or success messages */}
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">{success}</Alert>}
+
+      {/* Registration form */}
       <Form onSubmit={handleSubmit}>
         <Form.Group controlId="username">
           <Form.Label>Username</Form.Label>
