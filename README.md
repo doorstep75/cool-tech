@@ -54,7 +54,7 @@ Ensure you have the following installed:
   ```
 3. 	Set up the environment variables (see Environment Variables).
   
-4.  Start the development servers:
+4.  Start the development servers (see below for commands per environment):
   ```bash
   npm start
   ```
