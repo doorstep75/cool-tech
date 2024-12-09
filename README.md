@@ -152,3 +152,17 @@ cool-tech/
 ## License
 
 This project is licensed under the MIT License.
+
+## To implement
+
+I completed this as part of a captsone project with a deadline.  Following successful submission and completion, I wish to highlight further improvements to be made:
+
+- The ability to give users with the correct credentials the ability to view current user passwords as they are always masked.
+
+- UX improvement that will warn users changing an existing password that the new password must be 6 characters minimum.
+
+- A more helpful error message when the password is updated that doesn't meet this rule.
+
+- A more dynmamic user greeting per dashboard as it's currently hard-coded as a greeting per dashboard.
+
+- More CoolTech-related logos
