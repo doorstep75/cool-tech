@@ -152,3 +152,15 @@ cool-tech/
 ## License
 
 This project is licensed under the MIT License.
+
+## To implement
+
+I completed this task as a capstone project to a deadline but am aware of some upgrades I wish to make:
+
+- Allow users with appropriate permissions to view existing passwords as this is acceptable to their credential level.
+
+- Make dashboard greetings dynamic to the level of user signed in (currently hard coded greeting per dashboard).
+
+- Improve UX around reminding the user that passwords being updated need to be 6 characters minimum.  A generic error is given when they try to change an existing password where the mimimum isn't met.
+
+- more company-specific logos.
